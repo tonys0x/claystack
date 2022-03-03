@@ -97,8 +97,10 @@ function claim(wallet, orderIds) {
             resolve(true);
         }).catch(err => {
             console.log(`${wallet.address} Claim error: ${err.reason}`);
+            let timestamp = Math.floor((new Date().getTime()) / 1000)-60*60*24;
             for (let orderId of orderIds) {
-                writeOutput('rinkeby_orders.txt', `${wallet.address}:${orderId}:0\n`);
+                writeOutput('goerli_orders.txt', `${wallet.address}:${orderId}:0\n`);
+                writeOutput('goerli_orders.txt', `${wallet.address}:${Number(orderId)+1}:${timestamp}\n`);
             }
             resolve(false)
         });
@@ -198,28 +200,30 @@ function getClaimableOrders(myAddress) {
 }
 async function start(privateKey) {
     const wallet = new ethers.Wallet(privateKey, provider);
-    let coolDown = await getUserCoolDown(wallet.address);
-    if (coolDown == 0) {
-        await claimFaucetMatic(wallet);
-        await sleep(10000);
-    }
+    // let coolDown = await getUserCoolDown(wallet.address);
+    // if (coolDown == 0) {
+    //     await claimFaucetMatic(wallet);
+    //     await sleep(10000);
+    // }
 
-    let maticBalance = await getTokenBalance(wallet.address, maticContract);
-    if (maticBalance > 10000000) {
-        let isApproved = await hasApproved(maticContract, wallet.address, maticStakingContract);
-        if (!isApproved) {
-            await approve(wallet, maticContract, maticStakingContract);
-        }
-        await depositToken(wallet, maticBalance - 1000000);
-    }
+    // let maticBalance = await getTokenBalance(wallet.address, maticContract);
+    // if (maticBalance > 10000000) {
+    //     let isApproved = await hasApproved(maticContract, wallet.address, maticStakingContract);
+    //     if (!isApproved) {
+    //         await approve(wallet, maticContract, maticStakingContract);
+    //     }
+    //     await depositToken(wallet, maticBalance - 1000000);
+    // }
 
-    let csMaticBalance = await getTokenBalance(wallet.address, csMaticContract);
-    if (csMaticBalance > 10000000) {
-        await withdrawToken(wallet, csMaticBalance - 1000000);
-    }
+    // let csMaticBalance = await getTokenBalance(wallet.address, csMaticContract);
+    // if (csMaticBalance > 10000000) {
+    //     await withdrawToken(wallet, csMaticBalance - 1000000);
+    // }
     let orderIds = await getClaimableOrders(wallet.address);
+    
     if (orderIds.length > 0) {
-        await claim(wallet, orderIds);
+        console.log(orderIds)
+        // await claim(wallet, orderIds);
     }
 }
 
