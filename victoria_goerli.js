@@ -47,7 +47,6 @@ function withdrawToken(wallet, amount) {
             gasLimit: 1000000,
             value: ethers.utils.parseEther("0")
         }).then(async (result) => {
-            await result.wait();
             let rc = await result.wait();
             let timestamp = Math.floor((new Date().getTime()) / 1000);
             const event = rc.events.find(event => event.event === 'LogWithdraw');
