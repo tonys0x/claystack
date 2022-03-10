@@ -30,6 +30,8 @@ If you find this script is useful to you, donation will be appreciated: **0x434D
 * 文件改名
   * mv .env.example .env
 * 把私钥放在.env 文件里面的KEYS后面。比如：KEYS=000000000,011111111,0222222222
+* GOERLI_FUNDING_KEY=后面填一个钱包的私钥，这个钱包需要有足够的Goerli的ETH测试币，当其他号的ETH低于0.01的时候，自动转账0.1 ETH过去。不填就不会自动转账
+* RINKEBY_FUNDING_KEY=后面填一个钱包的私钥，这个钱包需要有足够的Rinkeby的ETH测试币，当其他号的ETH低于0.01的时候，自动转账0.1 ETH过去。不填就不会自动转账
 * .env文件里面配置的API有请求限制，所以最好申请一个自己的API。你可以通过https://www.alchemy.com/ 或者 https://infura.io/ 申请API（Goerli和Rinkeby网络)
 * 钱包需要一点的GETH(Goerli)和ETH(Rinbeky)才能运行脚本
 ## 自动领测试币(MATIC)，质押，解除质押和领取解除的质押（Goerli网络)
