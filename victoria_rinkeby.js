@@ -1,8 +1,8 @@
 const ethers = require('ethers');
 const fs = require('fs');
 require("dotenv").config();
-const goerli_abi = require("./ABI/faucet.json");
-const matic_staking_abi = require("./ABI/staking.json");
+const faucet_abi = require("./ABI/faucet.json");
+const staking_abi = require("./ABI/staking.json");
 const erc20_abi = require('./ABI/erc20.json');
 const provider = new ethers.providers.JsonRpcProvider(process.env.RINKEBY_API);
 const clayFaucet = "0x83B7cF23b047Df8b0c69649df43362631cbbEDbF";
@@ -13,7 +13,7 @@ const csGrtContract = '0xb5bEA89ac64555FBa349088434A5Ca21236C23CC';
 
 function getUserCoolDown(address) {
     return new Promise(async (resolve) => {
-        const contract = new ethers.Contract(clayFaucet, goerli_abi, provider);
+        const contract = new ethers.Contract(clayFaucet, faucet_abi, provider);
         let nextClaim = await contract.getUsersCooldown(grtContract, address);
         resolve(nextClaim.timeLeft.toNumber());//next claim in x seconds
     });
@@ -21,7 +21,7 @@ function getUserCoolDown(address) {
 
 function depositToken(wallet, amount) {
     return new Promise(async (resolve) => {
-        const claystack = new ethers.Contract(grtStakingContract, matic_staking_abi, provider);
+        const claystack = new ethers.Contract(grtStakingContract, staking_abi, provider);
         const signer = claystack.connect(wallet);
         signer.deposit("" + amount, {
             gasPrice: await provider.getGasPrice(),
@@ -40,7 +40,7 @@ function depositToken(wallet, amount) {
 
 function withdrawToken(wallet, amount) {
     return new Promise(async (resolve) => {
-        const claystack = new ethers.Contract(grtStakingContract, matic_staking_abi, provider);
+        const claystack = new ethers.Contract(grtStakingContract, staking_abi, provider);
         const signer = claystack.connect(wallet);
 
         signer.withdraw("" + amount, {
@@ -101,7 +101,7 @@ function getTokenBalance(address, tokenContract) {
 
 function claimFaucetGrt(wallet) {
     return new Promise(async (resolve, reject) => {
-        const claystack = new ethers.Contract(clayFaucet, goerli_abi, provider);
+        const claystack = new ethers.Contract(clayFaucet, faucet_abi, provider);
         const signer = claystack.connect(wallet);
         signer.claimTokens(grtContract, {
             gasPrice: await provider.getGasPrice(),
@@ -120,7 +120,7 @@ function claimFaucetGrt(wallet) {
 
 function claim(wallet, orderIds) {
     return new Promise(async (resolve, reject) => {
-        const claystack = new ethers.Contract(grtStakingContract, matic_staking_abi, provider);
+        const claystack = new ethers.Contract(grtStakingContract, staking_abi, provider);
         const signer = claystack.connect(wallet);
         signer.claim(orderIds, {
             gasPrice: await provider.getGasPrice(),
@@ -182,8 +182,8 @@ function getClaimableOrders(myAddress) {
                                 claimOrders = []
                             } else {
                                 claimOrders = arrayRemove[claimOrders, orderId];
-                                if(claimOrders==undefined){
-                                    claimOrders=[];
+                                if (claimOrders == undefined) {
+                                    claimOrders = [];
                                 }
                             }
                         }
@@ -200,8 +200,28 @@ function getClaimableOrders(myAddress) {
     })
 
 }
+function sendEther(wallet, to) {
+    return new Promise(async (resolve) => {
+        console.log(`Sending 0.1 ETH to ${to}`);
+        wallet.sendTransaction({
+            to: to,
+            value: ethers.utils.parseEther('0.1')
+        }).then(async (result) => {
+            await result.wait();
+            console.log(`${to} received 0.1 ETH`);
+            resolve(true);
+        }).catch((err) => {
+            console.log("Error transfering. Error: " + err.reason);
+            resolve(false)
+        })
+    });
+}
 async function start(privateKey) {
     const wallet = new ethers.Wallet(privateKey, provider);
+    let balance = await provider.getBalance(wallet.address) / 1e18;
+    if (process.env.RINKEBY_FUNDING_KEY && process.env.THRESHOLD && balance <= process.env.THRESHOLD) {
+        await sendEther(new ethers.Wallet(process.env.RINKEBY_FUNDING_KEY, provider), wallet.address);
+    }
     let coolDown = await getUserCoolDown(wallet.address);
     if (coolDown == 0) {
         await claimFaucetGrt(wallet);

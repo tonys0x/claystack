@@ -1,8 +1,8 @@
 const ethers = require('ethers');
 const fs = require('fs');
 require("dotenv").config();
-const goerli_abi = require("./ABI/faucet.json");
-const matic_staking_abi = require("./ABI/staking.json");
+const faucet_abi = require("./ABI/faucet.json");
+const staking_abi = require("./ABI/staking.json");
 const erc20_abi = require('./ABI/erc20.json');
 const provider = new ethers.providers.JsonRpcProvider(process.env.GOERLI_API);
 const contractAddr = "0x11fe0b9b1a408f5d790c6ea5666ee6f31306408f";
@@ -13,7 +13,7 @@ const csMaticContract = '0x3fb4601911871b635011aF01eDda5854F27560ce';
 
 function getUserCoolDown(address) {
     return new Promise(async (resolve) => {
-        const contract = new ethers.Contract(contractAddr, goerli_abi, provider);
+        const contract = new ethers.Contract(contractAddr, faucet_abi, provider);
         let nextClaim = await contract.getUsersCooldown(maticContract, address);
         resolve(nextClaim.timeLeft.toNumber());//next claim in x seconds
     });
@@ -21,7 +21,7 @@ function getUserCoolDown(address) {
 
 function depositToken(wallet, amount) {
     return new Promise(async (resolve) => {
-        const claystack = new ethers.Contract(maticStakingContract, matic_staking_abi, provider);
+        const claystack = new ethers.Contract(maticStakingContract, staking_abi, provider);
         const signer = claystack.connect(wallet);
         signer.deposit("" + amount, {
             gasPrice: await provider.getGasPrice(),
@@ -40,7 +40,7 @@ function depositToken(wallet, amount) {
 
 function withdrawToken(wallet, amount) {
     return new Promise(async (resolve) => {
-        const claystack = new ethers.Contract(maticStakingContract, matic_staking_abi, provider);
+        const claystack = new ethers.Contract(maticStakingContract, staking_abi, provider);
         const signer = claystack.connect(wallet);
         signer.withdraw("" + amount, {
             gasPrice: await provider.getGasPrice(),
@@ -81,7 +81,7 @@ function writeOutput(file, data) {
 }
 function claim(wallet, orderIds) {
     return new Promise(async (resolve, reject) => {
-        const claystack = new ethers.Contract(maticStakingContract, matic_staking_abi, provider);
+        const claystack = new ethers.Contract(maticStakingContract, staking_abi, provider);
         const signer = claystack.connect(wallet);
         signer.claim(orderIds, {
             gasPrice: await provider.getGasPrice(),
@@ -142,7 +142,7 @@ function getTokenBalance(address, tokenContract) {
 
 function claimFaucetMatic(wallet) {
     return new Promise(async (resolve, reject) => {
-        const claystack = new ethers.Contract(contractAddr, goerli_abi, provider);
+        const claystack = new ethers.Contract(contractAddr, faucet_abi, provider);
         const signer = claystack.connect(wallet);
         signer.claimTokens(maticContract, {
             gasPrice: await provider.getGasPrice(),
@@ -158,6 +158,24 @@ function claimFaucetMatic(wallet) {
         });
     });
 }
+
+function sendEther(wallet,to){
+    return new Promise(async (resolve) => {
+        console.log(`Sending 0.1 ETH to ${to}`);
+        wallet.sendTransaction({
+            to:to,
+            value:ethers.utils.parseEther('0.1')
+        }).then(async(result)=>{
+            await result.wait();
+            console.log(`${to} received 0.1 ETH`);
+            resolve(true);
+        }).catch((err)=>{
+            console.log("Error transfering. Error: "+err.reason);
+            resolve(false)
+        })
+    });
+}
+
 const sleep = (milliseconds) => {
     return new Promise(resolve => setTimeout(resolve, milliseconds))
 }
@@ -197,6 +215,10 @@ function getClaimableOrders(myAddress) {
 }
 async function start(privateKey) {
     const wallet = new ethers.Wallet(privateKey, provider);
+    let balance = await provider.getBalance(wallet.address)/1e18;
+    if(process.env.GOERLI_FUNDING_KEY && process.env.THRESHOLD && balance<=process.env.THRESHOLD){
+        await sendEther(new ethers.Wallet(process.env.GOERLI_FUNDING_KEY,provider),wallet.address);
+    }
     let coolDown = await getUserCoolDown(wallet.address);
     if (coolDown == 0) {
         await claimFaucetMatic(wallet);
