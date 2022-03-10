@@ -96,10 +96,8 @@ function claim(wallet, orderIds) {
             resolve(true);
         }).catch(err => {
             console.log(`${wallet.address} Claim error: ${err.reason}`);
-            let timestamp = Math.floor((new Date().getTime()) / 1000)-60*60*24;
             for (let orderId of orderIds) {
                 writeOutput('goerli_orders.txt', `${wallet.address}:${orderId}:0\n`);
-                writeOutput('goerli_orders.txt', `${wallet.address}:${Number(orderId)+1}:${timestamp}\n`);
             }
             resolve(false)
         });
